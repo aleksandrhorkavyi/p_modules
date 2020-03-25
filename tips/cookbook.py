@@ -1,3 +1,5 @@
+# 8.13
+
 # [useful] - крутые фичи
 
 
@@ -173,6 +175,149 @@ class Point:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+
+
+
+# 8.10 Lazy property [useful]
+
+class lazyproperty:
+    def __init__(self, func):
+        self.func = func
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        value = self.func(instance)
+        setattr(instance, self.func.__name__, value)
+        return value
+
+
+import math
+
+
+class Circle:
+    def __init__(self, radius):
+        self.radius = radius
+
+    @lazyproperty
+    def area(self):
+        print('area: ')
+        return math.pi * self.radius ** 2
+
+
+circle = Circle(4)
+
+print(circle.area)
+print(circle.area)
+
+
+# 8.11 Упрощение инициализации структур данных [useful]
+
+class Structure:
+    _fields = []
+
+    def __init__(self, *args):
+        if len(args) != len(self._fields):
+            raise TypeError('Expected {} arguments'.format(len(self._fields)))
+
+        for name, value in zip(self._fields, args):
+            setattr(self, name, value)
+
+class Man(Structure):
+    _fields = ['age', 'name']
+
+man = Man(34, 'Alex')
+
+
+class Structure:
+    _fields = []
+
+    def __init__(self, *args, **kwargs):
+        if len(args) > len(self._fields):
+            raise TypeError('Expected {} arguments'.format(len(self._fields)))
+
+        for name, value in zip(self._fields, args):
+            setattr(self, name, value)
+
+        for name in self._fields[len(args):]:
+            setattr(self, name, kwargs.pop(name))
+
+        if kwargs:
+            raise TypeError('Invalid arguments {}'.format(','.join(kwargs)))
+
+class Woman(Structure):
+    _fields = ['age', 'name', 'siski']
+
+woman = Woman(23, 'Some Name', siski=3)
+
+
+# 8.12. Interface and Abstract class [useful]
+
+from abc import ABCMeta, abstractmethod
+
+class IStream(metaclass=ABCMeta):
+    @abstractmethod
+    def read(self, maxbytes=-1):
+        pass
+
+    @abstractmethod
+    def write(self, data: str):
+        pass
+
+class SocketStream(IStream):
+    def read(self, maxbytes=-1):
+        pass
+
+    def write(self, data: str):
+        pass
+
+socket = SocketStream()
+
+import io
+
+IStream.register(io.IOBase)
+
+# 8.16
+
+from datetime import time
+
+class Date:
+    def __init__(self, y, m, d):
+        self.year = y
+        self.month = m
+        self.day = d
+
+    def now(cls):
+        tim = time.localtime()
+
+
+# 8.18 Mixins [useful]
+
+class LoggedMappingMixin:
+    # типа чтобы низя было указать свойства
+    __slots__ = ()
+
+    def __getitem__(self, item):
+        print('get {}'.format(item))
+        return super().__getitem__(item)
+
+    def __setitem__(self, key, value):
+        print('set {} = {}'.format(key, value))
+        return super().__setitem__(key, value)
+
+    def __delitem__(self, key):
+        print('delete item {}'.format(key))
+        return super().__delitem__(key)
+
+
+class LoggedDict(LoggedMappingMixin, dict):
+    pass
+
+d = LoggedDict()
+
+d['x'] = 34
+d['y'] = 23
+y = d['y']
 
 
 
