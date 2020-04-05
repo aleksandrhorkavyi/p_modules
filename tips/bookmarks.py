@@ -462,16 +462,87 @@ class NamedArgsDTO:
 
 
 # 8.13
+print('------------ 8.13 ------------')
+# Реализации модели данных или системы подтипов
+
+class Descriptor:
+    """ дескриптор для установки значения """
+    def __init__(self, name = None, **opts):
+        self.name = name
+        for key, val in opts.items():
+            setattr(self, key, val)
+
+    def __set__(self, instance, value):
+        instance.__dict__[self.name] = value
 
 
+class Typed(Descriptor):
+    """ дескриптор для принудительного определения типов """
+    expected_type = type(None)
+    def __set__(self, instance, value):
+        if not isinstance(value, self.expected_type):
+            raise TypeError('Expected {} type'.format(str(self.expected_type)))
+        super().__set__(instance, value)
 
 
+class Unsigned(Descriptor): # Mixin
+    """ дескриптор для принудительного определения значений """
+    def __set__(self, instance, value):
+        if value < 0:
+            raise ValueError('Value must be grater then 0')
+        super().__set__(instance, value)
 
 
+class MaxSized(Descriptor): # Mixin
+     def __init__(self, name=None, **opts):
+         if 'size' not in opts:
+             raise TypeError('Missing "size"')
+         super().__init__(name, **opts)
+
+     def __set__(self, instance, value):
+         if len(value) >= self.size:
+             raise ValueError('Max size ' + str(self.size))
+         super().__set__(instance, value)
+
+# Это базовые строительные блоки из которых создается система типов
+# Реализкем другие типы данных
 
 
+class Int(Typed):
+    expected_type = int
 
 
+class UnsignedInt(Int, Unsigned):
+    pass
+
+
+class Float(Typed):
+    expected_type = float
+
+
+class UnsignedFloat(Float, Unsigned):
+    pass
+
+
+class String(Typed):
+    expected_type = str
+
+
+class SizedString(String, MaxSized):
+    pass
+
+# Теперь можно определить такой класс
+class Stock:
+    name = SizedString('name', size=8)
+    shares = UnsignedInt('shares')
+    price = UnsignedFloat('price')
+
+    def __init__(self, name, shares, price):
+        self.name = name
+        self.shares = shares
+        self.price = price
+
+stock_8_13 = Stock('Tooooo long name', 34, 43.4)
 
 # 281 308 318
 print(0)
