@@ -8,6 +8,15 @@
 
 # vars() - переменные окружения
 
+# процедура - именованная последовательность вычислительных шагов
+
+# функции высших порядков - функции, которые могут принимать
+# в качестве агрументов и возвращать другие функции
+
+# мемоизация - сохранение результатов выполнения функции для
+# предотвращения повторных вычислений
+
+
 # 1.4
 from pprint import pprint
 
@@ -129,7 +138,6 @@ def gen_find(file_pattern, top):
     Находит все имена файлов в дереве каталогов
     которые совпадают с шаблоном маски оболочки
     """
-    print('sooqa')
     for path, dirlist, filelist in os.walk(top):
         for name in fnmatch.filter(filelist, file_pattern):
             print(os.path.join(path, name))
@@ -542,7 +550,481 @@ class Stock:
         self.shares = shares
         self.price = price
 
-stock_8_13 = Stock('Tooooo long name', 34, 43.4)
+stock_8_13 = Stock('name', 34, 43.4)
 
-# 281 308 318
+
+
+# 8.14
+print('------------ 8.14 ------------')
+# Реализация собственных контейнеров
+""" создаем класс с поддержкой итераций """
+from collections.abc import MutableSequence
+
+
+class Workouts(MutableSequence):
+
+    def __init__(self, initial = None):
+        self._items = list(initial) if initial is not None else []
+
+    def __getitem__(self, i: int):
+        print('Getting...')
+        return self._items[i]
+
+    def __setitem__(self, key, value):
+        print('Set value {}'.format(str(value)))
+        self._items[key] = value
+
+    def __delitem__(self, key):
+        print('delete item {}'.format(str(key)))
+        del self._items[key]
+
+    def insert(self, index: int, object) -> None:
+        print('Inserting')
+        self._items.insert(index, object)
+
+    def __len__(self):
+        print('count length')
+        return len(self._items)
+
+
+w = Workouts([1,2,3,76])
+w.append(354)
+l = len(w)
+
+
+# 8.15
+print('------------ 8.15 ------------')
+# Делегирование доступа к атрибуту
+# Если нужно делегировать много методов можно использовать
+# метод __getattr__()
+
+class A_8_15:
+    def spam(self, x): ...
+
+    def foo(self):
+        return 'foo'
+
+
+class B_8_15:
+    def __init__(self):
+        self._a = A_8_15()
+
+    def bar(self): ...
+
+    def baz(self):
+        return 'baz'
+
+    def __getattr__(self, item):
+        """
+        если аттрибута в классе B_8_15 нет то срабатывает
+        метод __getattr__ а тут мы делегируем все на A_8_15
+        """
+        return getattr(self._a, item)
+
+
+b_8_15 = B_8_15()
+bar_8_15 = b_8_15.bar()
+baz_8_15 = b_8_15.baz()
+foo_8_15 = b_8_15.foo()
+
+""" Маленький Прокси-класс """
+class Proxy:
+    def __init__(self, obj):
+        self._obj = obj
+
+    def __getattr__(self, item):
+        print('getattr', item)
+        return getattr(self._obj, item)
+
+    def __setattr__(self, key: str, value):
+        if key.startswith('_'):
+            super().__setattr__(key, value)
+        else:
+            print('setattr', value)
+            setattr(self._obj, key, value)
+
+    def __delattr__(self, item: str):
+        if item.startswith('_'):
+            super().__delattr__(item)
+        else:
+            print('delattr', item)
+            delattr(self._obj, item)
+
+
+proxy_8_15 = Proxy(b_8_15)
+pfoo = proxy_8_15.foo()
+pbaz = proxy_8_15.baz()
+
+
+# 8.16
+print('------------ 8.16 ------------')
+# Определение более одного конструктора в классе
+""" для этого нужно испольковать метод класса """
+import time
+
+class Date:
+    def __init__(self, y, m, d):
+        """ основной конструктор """
+        self.y = y
+        self.m = m
+        self.d = d
+
+    @classmethod
+    def today(cls):
+        loctime = time.localtime()
+        return cls(loctime.tm_year, loctime.tm_mon, loctime.tm_mday)
+
+    def __str__(self):
+        return '{}/{}/{}'.format(self.y, self.m, self.d)
+
+date_8_16 = Date(2020,12,12)
+date_today_8_16 = Date.today()
+
+
+# 8.17
+print('------------ 8.17 ------------')
+# Создание екземпляра без вызова __init__()
+date_8_17 = Date.__new__(Date)
+
+
+# 8.18
+print('------------ 8.18 ------------')
+# Расширение класса с помощью Mixins
+
+"""
+У миксин не должно быть собственного метода __init__()
+и переменных экземпляра
+"""
+
+class LoggedMappingMixin:
+    # типа чтобы низя было указать свойства
+    __slots__ = ()
+
+    def __getitem__(self, item):
+        print('get {}'.format(item))
+        return super().__getitem__(item)
+
+    def __setitem__(self, key, value):
+        print('set {} = {}'.format(key, value))
+        return super().__setitem__(key, value)
+
+    def __delitem__(self, key):
+        print('delete item {}'.format(key))
+        return super().__delitem__(key)
+
+
+class LoggedDict(LoggedMappingMixin, dict):
+    pass
+
+d = LoggedDict()
+
+d['x'] = 34
+d['y'] = 23
+y = d['y']
+
+
+# 8.24
+print('------------ 8.24 ------------')
+# Классы с поддержкой операции сравнения
+from functools import total_ordering
+
+class Room:
+    def __init__(self, name: str, length: int, width: int):
+        self.name = name
+        self.length = length
+        self.width = width
+        self.square_feet = self.length * self.width
+
+@total_ordering
+class House:
+    def __init__(self, name, style):
+        self.name = name
+        self.style = style
+        self.rooms = []
+
+    @property
+    def living_space(self):
+        return sum(r.square_feet for r in self.rooms)
+
+    def add_room(self, room):
+        self.rooms.append(room)
+
+    def __str__(self):
+        return 'House {}, rooms: {}'.format(self.name, len(self.rooms))
+
+    def __eq__(self, other: 'House'):
+        return self.living_space == other.living_space
+
+    def __lt__(self, other: 'House'):
+        return self.living_space < other.living_space
+
+new_house_8_24 = House('New house', 'Split')
+new_house_8_24.add_room(Room('Kitchen', 8, 6))
+new_house_8_24.add_room(Room('Bedroom', 12, 7))
+
+my_house_8_24 = House('My current house', 'Split')
+my_house_8_24.add_room(Room('Bedroom', 10, 9))
+my_house_8_24.add_room(Room('Kitchen', 5, 6))
+
+my_8_24 = my_house_8_24.living_space
+new_8_24 = new_house_8_24.living_space
+
+is_bigger = new_house_8_24 < my_house_8_24
+
+
+# 9 Метапрограммирование - создание ф-ций и классов,
+# чьей задачей является управление кодом (модификация
+# генерация, обертывание существующего кода).
+
+# Возможности: декораторы функций, классов и метаклассы
+
+# 9.1, 9.2
+print('------------ 9.1|9.2 ------------')
+# Создание обертки для функций
+
+from functools import wraps
+
+# wraps - декоратор для моей обертки, чтобы не терять метаданные
+# имя, строка документации, аннотации, сигнатура вызова
+# особенность @wraps заключается в том, что он делает обернутую
+# ф-ю доступной в аттрибуте __wrapped__
+
+# обращение напрямую к обернутой ф-ции
+# do_something.__wrapped__()
+
+def timethis(func):
+    """ декоратор выводящий время выполнения """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        print(func.__name__, end - start)
+        return result
+    return wrapper
+
+
+@timethis
+def do_something():
+    val = 1
+    for i in range(0, 5000000):
+        val += i
+    return val
+
+val_9_1 = do_something()
+
+
+# 9.4
+print('------------ 9.4 ------------')
+# Определение декоратора принимающего аргументы
+
+import logging
+
+def logged(level, name=None, message=None):
+    def decorate(func):
+        logname = name if name else func.__module__
+        log = logging.getLogger(logname)
+        logmsg = message if message else func.__name__
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            log.log(level, logmsg)
+            return func(*args, **kwargs)
+        return wrapper
+    return decorate
+
+
+def foo():
+    pass
+
+# пример отсюда: https://tproger.ru/translations/demystifying-decorators-in-python/
+
+def benchmark(iters):
+
+    def run_benchmark(func):
+        import time
+        from functools import wraps
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            start = time.time()
+            for i in range(iters):
+                responce = func(*args, **kwargs)
+            end = time.time()
+            print('Total time: {}'.format(end - start))
+
+        return wrapper
+    return run_benchmark
+
+@benchmark(5)
+def get_page(url):
+    import requests
+    return requests.get(url)
+
+
+resp = get_page('https://google.com')
+
+# 9.6
+print('------------ 9.6 ------------')
+# Декоратор с параметрами и без
+domain = 'hooligan.pp.ua'
+
+def normalize(func=None, *, schema = 'https'):
+    if func is None:
+        return partial(normalize, schema=schema)
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return '{}://{}/{}'.format(schema, domain, func(*args, **kwargs))
+    return wrapper
+
+
+@normalize(schema='http')
+def create_url(url):
+    return url
+
+url = create_url('path/to/action')
+
+
+# 9.7
+print('------------ 9.7 ------------')
+# Принудительная проверка  типов в функции с использованием декоратора
+from inspect import signature
+
+def typeassert(*ty_args, **ty_kwargs):
+    def decorate(func):
+        if not __debug__:
+            return func
+        # отображаем имена аргументов на предоставленные типы
+        sig = signature(func)
+        bound_types = sig.bind_partial(*ty_args, **ty_kwargs).arguments
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            bound_values = sig.bind(*args, **kwargs)
+            # принудительно проверяем типы аргументов ассертами
+            for name, value in bound_values.arguments.items():
+                if name in bound_types:
+                    if not isinstance(value, bound_types[name]):
+                        raise TypeError('Argument {} must be {}'.format(name, bound_types[name]))
+            return func(*args, **kwargs)
+        return wrapper
+    return decorate
+
+@typeassert(int, criteria=str)
+def foo_9_7(a,b,criteria):
+    return a,b,c
+
+var_foo_9_7 = foo_9_7(1, 'q', 'FF')
+
+
+# 9.8
+print('------------ 9.7 ------------')
+# Определение декораторов как части класса
+
+class A_9_8:
+    # Декоратор как метод экземпляра
+    def decorator1(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            print('Decorator 1')
+            return func(*args, **kwargs)
+        return wrapper
+
+    @classmethod
+    def decorator2(cls, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            print('Decorator 2')
+            return func(*args, **kwargs)
+        return wrapper
+
+
+a_9_8 = A_9_8()
+
+@a_9_8.decorator1
+def spam_9_8():
+    pass
+
+@A_9_8.decorator2
+def foo_9_8():
+    pass
+
+
+# 9.9
+print('------------ 9.9 ------------')
+# Определение декораторов как классов
+
+# Чтобы обернуть функциюю декоратором результат которой будет
+# вызываемым объектом. Чтобы декоратор работал и внутри и снаружи
+# определения класса
+
+# Чтобы определить декоратор как экземпляр, нужно реализовать
+# методы __call__() и __get__()
+
+import types
+
+class Profiled:
+    def __init__(self, func):
+        wraps(func)(self)
+        self.ncalls = 0
+
+    def __call__(self, *args, **kwargs):
+        self.ncalls +=1
+        return self.__wrapped__(*args, **kwargs)
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        return types.MethodType(self, instance)
+
+# применение
+@Profiled
+def foo_9_9():
+    pass
+
+# или
+class spam_9_9:
+    @Profiled
+    def bar(self, x):
+        pass
+
+
+# 9.10
+print('------------ 9.10 ------------')
+# Применение декораторов к методам класса и статическим методам
+
+# как обичные декораторы только должен быть ниже чем
+# @staticmethod или @abstractmethod
+
+
+# 9.11
+print('------------ 9.11 ------------')
+# написание декораторов которые добавляют аргументы обернутым функциям
+import inspect
+
+def optional_debug(func):
+    sig = inspect.signature(func)
+    if 'debug' in sig.parameters.keys():
+        raise TypeError('debug argument already defined')
+    @wraps(func)
+    def wrapper(*args, debug=False, **kwargs):
+        if debug:
+            print('Calling', func.__name__)
+            return func(*args, **kwargs)
+    params = list(sig.parameters.values())
+    params.append(inspect.Parameter('debug', inspect.Parameter.KEYWORD_ONLY, default=False))
+    wrapper.__signature__ = sig.replace(parameters=params)
+    return wrapper
+
+
+@optional_debug
+def foo(x, y):
+    return  x * y
+
+foo(1,2)
+
+
+
+
+
 print(0)
