@@ -1019,7 +1019,7 @@ def optional_debug(func):
 
 @optional_debug
 def foo(x, y):
-    return  x * y
+    return x * y
 
 foo(1,2)
 
